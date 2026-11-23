@@ -25,9 +25,18 @@ body.big .tb{width:56px;height:46px;font-size:20px}
 .page{max-width:560px;margin:0 auto;padding:0 12px 24px}
 .lr{background:#1f1a33!important}
 .lr-vs{background:#2a1a2e!important}
-body.mini .lr{margin-top:8px;padding:10px}
-body.mini .lr h3,body.mini .lr .lr-d,body.mini .lr ol,body.mini .lr .lr-list-msg{display:none}
-body.mini .lr:not(.has-res){display:none}
+body.mini .page{padding:0 8px 10px}
+body.mini .lr{margin-top:6px;padding:8px 10px;border-radius:12px}
+body.mini .lr h3{font-size:14px;margin:0 0 4px}
+body.mini .lr .lr-d{display:none}
+body.mini .lr li{padding:3px 8px;font-size:13px}
+body.mini .lr li:nth-child(n+4){display:none}
+body.mini .lr .rk,body.mini .lr .sc{font-size:14px}
+body.mini .lr .lr-list-msg{padding:4px 0;font-size:12px}
+body.mini .lr .lr-res{font-size:14px}
+body.mini .lr .lr-row{margin-top:4px}
+body.mini .lr .lr-in{min-width:90px;padding:6px 8px;font-size:13px}
+body.mini .lr-btn{font-size:13px;padding:6px 10px}
 body.mini .lr-vs{margin:6px 8px 0;padding:6px 8px;font-size:13px}
 </style>
 </head>
@@ -120,7 +129,7 @@ B=Array.from({length:H},()=>Array(W).fill(0));draw();drawSpd();
 /* ---------- 미니 창으로 열기 ---------- */
 (function(){
   const isMini=location.hash==="#mini";
-  const W0=330,H0=460;
+  const W0=330,H0=600;
   function openMini(){
     const L=Math.max(0,(screen.availWidth||1200)-W0-20),T=Math.max(0,(screen.availHeight||800)-H0-60);
     return window.open(location.href.split("#")[0]+"#mini","mini_tetris",`popup=yes,width=${W0},height=${H0},left=${L},top=${T},resizable=yes`);
@@ -288,6 +297,7 @@ const LunaRank=(function(){
 })();
 window.LunaRank=LunaRank;
 LunaRank.init({game:"tetris",title:"미니 테트리스",unit:"점",subLabel:"줄",mount:document.getElementById("rankMount"),banner:document.getElementById("wrap")});
+if(location.hash==="#mini"){const h=document.querySelector(".lr h3");if(h)h.textContent="🏆 TOP 3";}
 </script>
 </body>
 </html>
