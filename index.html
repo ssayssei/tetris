@@ -17,6 +17,18 @@ button:active{transform:scale(.98)}
 #launch b{font-size:18px;color:var(--text-primary);font-weight:500}
 #launch .big{font-size:15px;padding:10px 20px}
 body.mini #wrap{padding:8px 0}
+body.big #wrap{gap:22px}
+body.big .side{width:150px;font-size:16px!important}
+body.big #msg{font-size:14px!important}
+body.big .side button{font-size:15px!important;padding:9px 12px}
+body.big .tb{width:56px;height:46px;font-size:20px}
+.page{max-width:560px;margin:0 auto;padding:0 12px 24px}
+.lr{background:#1f1a33!important}
+.lr-vs{background:#2a1a2e!important}
+body.mini .lr{margin-top:8px;padding:10px}
+body.mini .lr h3,body.mini .lr .lr-d,body.mini .lr ol,body.mini .lr .lr-list-msg{display:none}
+body.mini .lr:not(.has-res){display:none}
+body.mini .lr-vs{margin:6px 8px 0;padding:6px 8px;font-size:13px}
 </style>
 </head>
 <body>
@@ -26,9 +38,10 @@ body.mini #wrap{padding:8px 0}
 <button class="big" id="openMini">🪟 미니 창으로 열기</button>
 <button id="here" style="font-size:13px">그냥 여기서 할래요</button>
 </div>
+<div class="page" id="page">
 <div id="wrap" tabindex="0" style="padding:0.75rem 0;display:flex;justify-content:center;gap:16px;align-items:flex-start">
 <canvas id="cv" width="150" height="300" style="border:0.5px solid var(--border-strong);border-radius:6px;background:var(--bg-neutral)"></canvas>
-<div style="width:120px;font-size:13px;color:var(--text-secondary)">
+<div class="side" style="width:120px;font-size:13px;color:var(--text-secondary)">
 <div>다음</div>
 <canvas id="nx" width="64" height="48" style="margin:4px 0 10px"></canvas>
 <div>점수 <b id="sc" style="color:var(--text-primary);font-weight:500">0</b></div>
@@ -50,11 +63,15 @@ body.mini #wrap{padding:8px 0}
 <button class="tb" data-a="H" aria-label="바로 내리기">⤓</button>
 <button class="tb" data-a="Rt" aria-label="오른쪽">→</button>
 </div>
+<div id="rankMount"></div>
+</div>
 <script>
-const W=10,H=20,S=15,cv=document.getElementById('cv'),c=cv.getContext('2d'),nc=document.getElementById('nx').getContext('2d');
+const W=10,H=20,cv=document.getElementById('cv'),c=cv.getContext('2d'),nc=document.getElementById('nx').getContext('2d');
 const P={I:[[1,1,1,1]],O:[[1,1],[1,1]],T:[[0,1,0],[1,1,1]],S:[[0,1,1],[1,1,0]],Z:[[1,1,0],[0,1,1]],J:[[1,0,0],[1,1,1]],L:[[0,0,1],[1,1,1]]};
 const COL={I:'#5DCAA5',O:'#EF9F27',T:'#7F77DD',S:'#97C459',Z:'#E24B4A',J:'#378ADD',L:'#D4537E'};
 const KS=Object.keys(P);
+let S=15;
+function setSize(px){S=px;cv.width=W*S;cv.height=H*S;draw();}
 let B,cur,nxt,sc,ln,lv,best=0,tm=null,on=false,pause=false,bag=[];
 try{best=+localStorage.getItem('mini_tetris_best')||0;}catch(e){}
 document.getElementById('bs').textContent=best;
@@ -66,7 +83,7 @@ function merge(){cur.m.forEach((r,ry)=>r.forEach((v,qx)=>{if(v&&cur.y+ry>=0)B[cu
 let n=0;for(let y=H-1;y>=0;y--){if(B[y].every(v=>v)){B.splice(y,1);B.unshift(Array(W).fill(0));n++;y++}}
 if(n){sc+=[0,100,300,500,800][n]*lv;ln+=n;const ps=stage(lv);lv=Math.floor(ln/10)+1;upd();drawSpd();if(stage(lv)>ps)flash(STAGE[stage(lv)]+' 구간 돌입!');else if(n===4)flash('테트리스!!');restart()}spawn()}
 function flash(t){const m=document.getElementById('msg');m.textContent=t;setTimeout(()=>{if(on&&!pause)m.textContent='화이팅!'},900)}
-function upd(){document.getElementById('sc').textContent=sc;document.getElementById('ln').textContent=ln;document.getElementById('lv').textContent=lv}
+function upd(){if(window.LunaRank)LunaRank.progress(sc);document.getElementById('sc').textContent=sc;document.getElementById('ln').textContent=ln;document.getElementById('lv').textContent=lv}
 function drop(){if(!on||pause)return;if(!hit(cur.m,cur.x,cur.y+1))cur.y++;else merge();draw()}
 function act(a){if(!on||pause)return;
 if(a==='L'&&!hit(cur.m,cur.x-1,cur.y))cur.x--;
@@ -90,14 +107,14 @@ function drawSpd(){document.getElementById('spd').textContent=STAGE[stage(lv||1)
 function restart(){clearInterval(tm);tm=setInterval(drop,speed())}
 function over(){on=false;clearInterval(tm);const nb=sc>best;if(nb){best=sc;document.getElementById('bs').textContent=best;try{localStorage.setItem('mini_tetris_best',best);}catch(e){}}
 document.getElementById('msg').textContent=(nb?'신기록! ':'')+'게임 오버 · '+ln+'줄';
-document.getElementById('st').textContent='↻ 다시 하기'}
-function start(){B=Array.from({length:H},()=>Array(W).fill(0));sc=0;ln=0;lv=1;nxt=null;bag=[];on=true;pause=false;upd();
+document.getElementById('st').textContent='↻ 다시 하기';if(window.LunaRank){LunaRank.gameOver(sc,ln);const r=document.querySelector('.lr');if(r)r.classList.add('has-res');}}
+function start(){if(window.LunaRank){LunaRank.reset();const r=document.querySelector('.lr');if(r)r.classList.remove('has-res');}B=Array.from({length:H},()=>Array(W).fill(0));sc=0;ln=0;lv=1;nxt=null;bag=[];on=true;pause=false;upd();
 document.getElementById('ps').textContent='⏸ 일시정지';
 document.getElementById('st').textContent='↻ 새 판';drawSpd();document.getElementById('msg').textContent='화이팅!';spawn();draw();restart();document.getElementById('wrap').focus()}
 document.getElementById('st').onclick=start;
 document.getElementById('ps').onclick=()=>{if(!on)return;pause=!pause;document.getElementById('msg').textContent=pause?'잠깐 쉬는 중':'화이팅!';document.getElementById('ps').textContent=pause?'▷ 이어 하기':'⏸ 일시정지';pause?clearInterval(tm):restart();document.getElementById('wrap').focus()};
 document.querySelectorAll('.tb').forEach(b=>b.onclick=()=>{act(b.dataset.a);document.getElementById('wrap').focus()});
-document.addEventListener('keydown',e=>{const m={ArrowLeft:'L',ArrowRight:'Rt',ArrowUp:'R',ArrowDown:'D',' ':'H'};if(m[e.key]&&on){e.preventDefault();act(m[e.key])}else if((e.key==='p'||e.key==='P')&&on)document.getElementById('ps').click()});
+document.addEventListener('keydown',e=>{const t=e.target;if(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'))return;const m={ArrowLeft:'L',ArrowRight:'Rt',ArrowUp:'R',ArrowDown:'D',' ':'H'};if(m[e.key]&&on){e.preventDefault();act(m[e.key])}else if((e.key==='p'||e.key==='P')&&on)document.getElementById('ps').click()});
 B=Array.from({length:H},()=>Array(W).fill(0));draw();drawSpd();
 
 /* ---------- 미니 창으로 열기 ---------- */
@@ -119,10 +136,158 @@ B=Array.from({length:H},()=>Array(W).fill(0));draw();drawSpd();
     if(w){document.getElementById("lmsg").textContent="미니 창이 열렸어요! 이 창은 닫아도 돼요 👋";document.getElementById("openMini").style.display="none";try{w.focus();}catch(e){}}
     else document.getElementById("lmsg").textContent="창 열기가 막혔어요 😢 주소창 오른쪽의 팝업 허용을 눌러 주세요";}
   document.getElementById("openMini").onclick=go;
-  document.getElementById("here").onclick=()=>{ov.style.display="none";};
+  function goBig(){document.body.classList.add("big");setSize(Math.max(18,Math.min(28,Math.floor((innerHeight-150)/H))));}
+  document.getElementById("here").onclick=()=>{ov.style.display="none";goBig();};
   const w=openMini();
   if(w){document.getElementById("lmsg").textContent="미니 창이 열렸어요! 이 창은 닫아도 돼요 👋";document.getElementById("openMini").style.display="none";}
 })();
+</script>
+<script>
+/* ===== 달빛 야시장 · 랭킹판 & 도전장 (파일 안에 내장) =====
+   Firebase Realtime Database 주소를 아래 dbUrl에 넣으면 랭킹판이 켜져요.
+   비워 두면 랭킹판은 "준비 중"으로 보이고, 도전장 링크는 그대로 쓸 수 있어요. */
+const LUNA_RANK_CONFIG={dbUrl:"https://lunalab-4a779-default-rtdb.firebaseio.com"};
+const LunaRank=(function(){
+  const C=LUNA_RANK_CONFIG,DB=String(C.dbUrl||"").trim().replace(/\/+$/,""),READY=/^https:\/\/[\w.-]+\.(firebaseio\.com|firebasedatabase\.app)$/.test(DB);
+  let G=null,box=null,vs=null,last=null,sent=false;
+  const esc=t=>String(t).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const fmt=n=>Math.round(n).toLocaleString("ko-KR");
+  const base=()=>`${DB}/games/${G.game}/scores`;
+  function b64e(o){const s=unescape(encodeURIComponent(JSON.stringify(o)));return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");}
+  function b64d(t){try{t=t.replace(/-/g,"+").replace(/_/g,"/");while(t.length%4)t+="=";return JSON.parse(decodeURIComponent(escape(atob(t))));}catch(e){return null;}}
+  function myName(v){try{if(v!==undefined)localStorage.setItem("luna_rank_name",v);return localStorage.getItem("luna_rank_name")||"";}catch(e){return v||"";}}
+  function css(){
+    if(document.getElementById("lrStyle"))return;
+    const st=document.createElement("style");st.id="lrStyle";st.textContent=`
+    .lr{margin-top:22px;background:rgba(255,255,255,.04);border:1px solid rgba(227,194,122,.28);border-radius:18px;padding:16px;color:#efe8ff;font-family:"Gowun Dodum","Noto Serif KR",system-ui,sans-serif}
+    .lr h3{margin:0 0 4px;font-family:"Jua",sans-serif;font-weight:400;font-size:20px;color:#f6c98a}
+    .lr .lr-d{font-size:13px;color:#a99cc9;margin:0 0 10px}
+    .lr ol{list-style:none;margin:0;padding:0}
+    .lr li{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:10px;font-size:14px}
+    .lr li:nth-child(odd){background:rgba(0,0,0,.18)}
+    .lr li.me{outline:1px solid #f6c98a;background:rgba(246,201,138,.12)}
+    .lr .rk{width:28px;text-align:center;font-family:"Jua",sans-serif;font-size:16px;flex-shrink:0}
+    .lr .nm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .lr .sc{font-family:"Jua",sans-serif;font-size:16px;color:#fff}
+    .lr .sb{font-size:11px;color:#a99cc9;margin-left:4px}
+    .lr .empty{font-size:13px;color:#a99cc9;text-align:center;padding:14px 0;line-height:1.7}
+    .lr-btn{font-family:"Jua",sans-serif;font-size:15px;border:none;border-radius:12px;padding:9px 14px;cursor:pointer;color:#1a1230;background:linear-gradient(135deg,#f6c98a,#c98a3e)}
+    .lr-btn.ghost{background:transparent;color:#f6c98a;border:1px solid rgba(246,201,138,.5)}
+    .lr-btn:disabled{opacity:.45;cursor:default}
+    .lr-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;justify-content:center;margin-top:10px}
+    .lr-in{flex:1;min-width:120px;max-width:200px;padding:9px 12px;border-radius:10px;border:1px solid rgba(227,194,122,.35);background:rgba(0,0,0,.3);color:#efe8ff;font:inherit;font-size:15px}
+    .lr-err{font-size:12px;color:#ffb4a0;text-align:center;margin-top:6px;min-height:16px}
+    .lr-res{text-align:center;font-family:"Jua",sans-serif;font-size:18px;margin:2px 0 4px}
+    .lr-vs{position:relative;z-index:2;margin:0 0 14px;padding:10px 14px;border-radius:14px;border:1px dashed #ff8a7a;background:rgba(255,120,90,.10);font-family:"Jua",sans-serif;font-size:15px;color:#ffd8cf;text-align:center;line-height:1.6}
+    .lr-vs b{color:#fff;font-weight:400}
+    .lr-vs small{display:block;font-family:"Gowun Dodum",sans-serif;font-size:12px;color:#ffb8a8}
+    .lr-toast{position:fixed;left:50%;bottom:120px;transform:translateX(-50%);z-index:9996;background:#2a2050;border:1px solid #f6c98a;color:#efe8ff;padding:9px 16px;border-radius:999px;font-size:14px;opacity:0;transition:.3s;pointer-events:none;white-space:nowrap}
+    .lr-toast.show{opacity:1}`;
+    document.head.appendChild(st);
+  }
+  function toast(m){let t=document.getElementById("lrToast");if(!t){t=document.createElement("div");t.id="lrToast";t.className="lr-toast";document.body.appendChild(t);}
+    t.textContent=m;t.classList.add("show");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("show"),2000);}
+
+  /* ---------- 서버 ---------- */
+  async function top10(){
+    const r=await fetch(`${base()}.json?orderBy=%22score%22&limitToLast=10`);
+    if(!r.ok)throw new Error("read "+r.status);
+    const j=await r.json()||{};
+    return Object.entries(j).map(([id,v])=>({id,name:String((v&&v.name)||"?"),score:+((v&&v.score)||0),sub:+((v&&v.sub)||0)})).sort((a,b)=>b.score-a.score);
+  }
+  async function submit(name,score,sub){
+    const r=await fetch(`${base()}.json`,{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({name,score:Math.round(score),sub:Math.round(sub||0),at:{".sv":"timestamp"}})});
+    if(!r.ok)throw new Error("write "+r.status);
+    const j=await r.json();return j.name;
+  }
+
+  /* ---------- 화면 ---------- */
+  async function drawList(myId){
+    const ol=box.querySelector("ol"),em=box.querySelector(".lr-list-msg");
+    if(!READY){ol.innerHTML="";em.innerHTML="🏗️ 랭킹판 준비 중이에요<br>그동안 🔗 도전장으로 친구랑 겨뤄 봐요!";em.style.display="block";return;}
+    em.textContent="랭킹을 불러오는 중…";em.style.display="block";
+    try{
+      const L=await top10();
+      if(!L.length){ol.innerHTML="";em.innerHTML="아직 아무도 없어요!<br>첫 번째 주인공이 되어 봐요 👑";return;}
+      em.style.display="none";
+      ol.innerHTML=L.map((x,i)=>`<li class="${x.id===myId?"me":""}"><span class="rk">${["🥇","🥈","🥉"][i]||i+1}</span><span class="nm">${esc(x.name)}</span><span class="sc">${fmt(x.score)}<span class="sb">${G.subLabel&&x.sub?esc(x.sub+G.subLabel):""}</span></span></li>`).join("");
+    }catch(e){ol.innerHTML="";em.innerHTML="랭킹을 불러오지 못했어요 😢<br>인터넷 연결을 확인하거나 잠시 뒤에 다시 와 주세요";}
+  }
+  function shareLink(score){
+    const n=myName()||"익명";
+    const u=new URL(location.href);["vs","r","a","mini"].forEach(k=>u.searchParams.delete(k));u.hash="";
+    u.searchParams.set("vs",b64e({g:G.game,n,s:Math.round(score)}));
+    const text=`⚔️ ${n}의 ${G.title} 도전장! ${fmt(score)}${G.unit}을 넘어 봐 😏`;
+    return{text,url:u.toString()};
+  }
+  async function sendChallenge(score){
+    const {text,url}=shareLink(score);
+    try{
+      if(navigator.share&&/Mobi|Android|iPhone/i.test(navigator.userAgent)){await navigator.share({title:G.title+" 도전장",text,url});return;}
+      await navigator.clipboard.writeText(`${text}\n${url}`);toast("🔗 도전장 링크를 복사했어요! 친구한테 붙여 넣어 줘요");
+    }catch(e){
+      const ta=document.createElement("textarea");ta.value=`${text}\n${url}`;document.body.appendChild(ta);ta.select();
+      try{document.execCommand("copy");toast("🔗 도전장 링크를 복사했어요!");}catch(_){toast("복사가 안 됐어요 😢");}
+      ta.remove();
+    }
+  }
+  function drawResult(){
+    const R=box.querySelector(".lr-result");
+    if(!last){R.innerHTML="";return;}
+    let vsLine="";
+    if(vs){const d=last.score-vs.s;vsLine=d>0?`<div class="lr-res" style="color:#9fe6a0">🎉 도전 성공! ${esc(vs.n)}보다 ${fmt(d)}${G.unit} 더 높아요</div>`:d===0?`<div class="lr-res">🤝 무승부! 똑같은 ${fmt(vs.s)}${G.unit}</div>`:`<div class="lr-res" style="color:#ffb4a0">😭 아깝다! ${fmt(-d)}${G.unit} 차이로 졌어요</div>`;}
+    R.innerHTML=`${vsLine}<div class="lr-row" style="margin-top:4px">
+        ${READY?`<input class="lr-in" maxlength="10" placeholder="닉네임 (10자까지)" value="${esc(myName())}"><button class="lr-btn" data-a="sub">🏆 랭킹 등록</button>`:""}
+        <button class="lr-btn ghost" data-a="vs">🔗 ${vs&&last.score>vs.s?"되갚아 주기":"도전장 보내기"}</button>
+      </div><div class="lr-err"></div>`;
+    const inp=R.querySelector(".lr-in"),err=R.querySelector(".lr-err"),sb=R.querySelector('[data-a="sub"]');
+    if(inp)inp.addEventListener("input",()=>{err.textContent="";});
+    if(sb){
+      if(sent){sb.disabled=true;sb.textContent="✅ 등록 완료";}
+      sb.onclick=async()=>{
+        const n=inp.value.trim();
+        if(!n){err.textContent="닉네임을 적어 주세요";inp.focus();return;}
+        if(n.length>10){err.textContent="닉네임은 10자까지예요";return;}
+        if(last.score<=0){err.textContent="0점은 등록할 수 없어요. 한 판 더! 💪";return;}
+        sb.disabled=true;sb.textContent="등록하는 중…";myName(n);
+        try{const id=await submit(n,last.score,last.sub);sent=true;sb.textContent="✅ 등록 완료";toast("🏆 랭킹에 등록했어요!");drawList(id);}
+        catch(e){sb.disabled=false;sb.textContent="🏆 랭킹 등록";err.textContent="등록하지 못했어요. 잠시 뒤에 다시 눌러 주세요";}
+      };
+    }
+    R.querySelector('[data-a="vs"]').onclick=()=>{if(inp&&inp.value.trim())myName(inp.value.trim().slice(0,10));sendChallenge(last.score);};
+  }
+
+  /* ---------- 바깥에서 쓰는 것 ---------- */
+  function init(opt){
+    G=Object.assign({game:"game",title:"게임",unit:"점",subLabel:""},opt);css();
+    const p=new URLSearchParams(location.search).get("vs");
+    if(p){const o=b64d(p);if(o&&(o.g===G.game||(G.games||[]).includes(o.g))&&typeof o.s==="number"&&o.s>=0&&o.s<5e6)vs={n:String(o.n||"친구").slice(0,10),s:Math.round(o.s),g:o.g};}
+    box=document.createElement("section");box.className="lr";
+    box.innerHTML=`<h3>🏆 ${esc(G.board||G.title+" 랭킹")} TOP 10</h3><p class="lr-d">한 판 끝나면 랭킹에 등록하거나 🔗 도전장을 보낼 수 있어요</p><div class="lr-result"></div><ol></ol><div class="lr-list-msg empty"></div>`;
+    (G.mount||document.body).appendChild(box);
+    if(vs&&G.banner){
+      const b=document.createElement("div");b.className="lr-vs";b.id="lrVs";
+      b.innerHTML=`⚔️ <b>${esc(vs.n)}</b>의 도전장! <b>${fmt(vs.s)}${esc(G.unit)}</b>을 넘어 봐 😏<small id="lrVsSub">게임을 시작하면 남은 점수가 보여요</small>`;
+      G.banner.parentNode.insertBefore(b,G.banner);
+    }
+    drawList();
+  }
+  function setGame(game,board,title){
+    G.game=game;if(board)G.board=board;if(title)G.title=title;last=null;sent=false;
+    const h=box.querySelector("h3");if(h)h.textContent=`🏆 ${G.board||G.title+" 랭킹"} TOP 10`;
+    drawResult();drawList();
+  }
+  function progress(score){
+    if(!vs)return;const s=document.getElementById("lrVsSub");if(!s)return;
+    const d=vs.s-score;s.textContent=d>0?`${fmt(d)}${G.unit} 남았어요! 🔥`:`🎉 ${vs.n} 점수를 넘었어요! 그대로 끝까지!`;
+  }
+  function gameOver(score,sub){last={score:Math.round(score),sub:Math.round(sub||0)};sent=false;drawResult();}
+  function reset(){last=null;sent=false;if(box)drawResult();progress(0);}
+  return{init,setGame,progress,gameOver,reset,target:()=>vs,ready:READY};
+})();
+window.LunaRank=LunaRank;
+LunaRank.init({game:"tetris",title:"미니 테트리스",unit:"점",subLabel:"줄",mount:document.getElementById("rankMount"),banner:document.getElementById("wrap")});
 </script>
 </body>
 </html>
