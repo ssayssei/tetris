@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>미니 테트리스</title>
+<style>
+:root{--text-primary:#1f1e1d;--text-secondary:#6b6a66;--bg-neutral:#f0efec;--border-strong:#c9c7c0;--surface:#ffffff;--surface-hover:#f5f4f1}
+@media (prefers-color-scheme:dark){:root{--text-primary:#f2f1ee;--text-secondary:#a8a7a2;--bg-neutral:#2a2a28;--border-strong:#4a4946;--surface:#1f1f1e;--surface-hover:#2b2b29}}
+body{margin:0;background:var(--surface);color:var(--text-primary);font-family:-apple-system,"Malgun Gothic","Apple SD Gothic Neo",sans-serif}
+button{font:inherit;color:var(--text-primary);background:transparent;border:0.5px solid var(--border-strong);border-radius:8px;padding:6px 12px;cursor:pointer}
+button:hover{background:var(--surface-hover)}
+button:active{transform:scale(.98)}
+.tb{width:38px;height:34px;padding:0;font-size:16px}
+#wrap:focus{outline:none}
+#launch{position:fixed;inset:0;z-index:9;background:var(--surface);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;font-size:14px;color:var(--text-secondary)}
+#launch b{font-size:18px;color:var(--text-primary);font-weight:500}
+#launch .big{font-size:15px;padding:10px 20px}
+body.mini #wrap{padding:8px 0}
+</style>
+</head>
+<body>
+<div id="launch" style="display:none">
+<b>🧱 미니 테트리스</b>
+<span id="lmsg">작은 창으로 열어서 몰래 해요 🤫</span>
+<button class="big" id="openMini">🪟 미니 창으로 열기</button>
+<button id="here" style="font-size:13px">그냥 여기서 할래요</button>
+</div>
+<div id="wrap" tabindex="0" style="padding:0.75rem 0;display:flex;justify-content:center;gap:16px;align-items:flex-start">
+<canvas id="cv" width="150" height="300" style="border:0.5px solid var(--border-strong);border-radius:6px;background:var(--bg-neutral)"></canvas>
+<div style="width:120px;font-size:13px;color:var(--text-secondary)">
+<div>다음</div>
+<canvas id="nx" width="64" height="48" style="margin:4px 0 10px"></canvas>
+<div>점수 <b id="sc" style="color:var(--text-primary);font-weight:500">0</b></div>
+<div>줄 <b id="ln" style="color:var(--text-primary);font-weight:500">0</b></div>
+<div>레벨 <b id="lv" style="color:var(--text-primary);font-weight:500">1</b></div>
+<div>최고 <b id="bs" style="color:var(--text-primary);font-weight:500">0</b></div>
+<p id="msg" style="margin:10px 0 8px;font-size:12px;line-height:1.5">시작을 누르고<br>방향키·스페이스로 조작</p>
+<div style="display:flex;flex-direction:column;gap:6px">
+<button id="st" style="font-size:13px">▷ 시작</button>
+<button id="ps" style="font-size:13px">⏸ 일시정지</button>
+<div style="font-size:12px;text-align:center">속도 <b id="spd" style="color:var(--text-primary);font-weight:500">🐢 보통</b></div>
+</div>
+</div>
+</div>
+<div style="display:flex;justify-content:center;gap:6px;padding-bottom:0.5rem">
+<button class="tb" data-a="L" aria-label="왼쪽">←</button>
+<button class="tb" data-a="R" aria-label="회전">⟳</button>
+<button class="tb" data-a="D" aria-label="아래">↓</button>
+<button class="tb" data-a="H" aria-label="바로 내리기">⤓</button>
+<button class="tb" data-a="Rt" aria-label="오른쪽">→</button>
+</div>
+<script>
+const W=10,H=20,S=15,cv=document.getElementById('cv'),c=cv.getContext('2d'),nc=document.getElementById('nx').getContext('2d');
+const P={I:[[1,1,1,1]],O:[[1,1],[1,1]],T:[[0,1,0],[1,1,1]],S:[[0,1,1],[1,1,0]],Z:[[1,1,0],[0,1,1]],J:[[1,0,0],[1,1,1]],L:[[0,0,1],[1,1,1]]};
+const COL={I:'#5DCAA5',O:'#EF9F27',T:'#7F77DD',S:'#97C459',Z:'#E24B4A',J:'#378ADD',L:'#D4537E'};
+const KS=Object.keys(P);
+let B,cur,nxt,sc,ln,lv,best=0,tm=null,on=false,pause=false,bag=[];
+try{best=+localStorage.getItem('mini_tetris_best')||0;}catch(e){}
+document.getElementById('bs').textContent=best;
+function rnd(){if(!bag.length)bag=[...KS].sort(()=>Math.random()-.5);const k=bag.pop();return{k,m:P[k].map(r=>[...r]),x:0,y:0}}
+function spawn(){cur=nxt||rnd();nxt=rnd();cur.x=Math.floor((W-cur.m[0].length)/2);cur.y=0;if(hit(cur.m,cur.x,cur.y)){over();return}drawNext()}
+function hit(m,x,y){for(let r=0;r<m.length;r++)for(let q=0;q<m[r].length;q++)if(m[r][q]){const X=x+q,Y=y+r;if(X<0||X>=W||Y>=H||(Y>=0&&B[Y][X]))return true}return false}
+function rot(m){return m[0].map((_,i)=>m.map(r=>r[i]).reverse())}
+function merge(){cur.m.forEach((r,ry)=>r.forEach((v,qx)=>{if(v&&cur.y+ry>=0)B[cur.y+ry][cur.x+qx]=cur.k}));
+let n=0;for(let y=H-1;y>=0;y--){if(B[y].every(v=>v)){B.splice(y,1);B.unshift(Array(W).fill(0));n++;y++}}
+if(n){sc+=[0,100,300,500,800][n]*lv;ln+=n;const ps=stage(lv);lv=Math.floor(ln/10)+1;upd();drawSpd();if(stage(lv)>ps)flash(STAGE[stage(lv)]+' 구간 돌입!');else if(n===4)flash('테트리스!!');restart()}spawn()}
+function flash(t){const m=document.getElementById('msg');m.textContent=t;setTimeout(()=>{if(on&&!pause)m.textContent='화이팅!'},900)}
+function upd(){document.getElementById('sc').textContent=sc;document.getElementById('ln').textContent=ln;document.getElementById('lv').textContent=lv}
+function drop(){if(!on||pause)return;if(!hit(cur.m,cur.x,cur.y+1))cur.y++;else merge();draw()}
+function act(a){if(!on||pause)return;
+if(a==='L'&&!hit(cur.m,cur.x-1,cur.y))cur.x--;
+if(a==='Rt'&&!hit(cur.m,cur.x+1,cur.y))cur.x++;
+if(a==='D'){drop();sc+=1;upd();return}
+if(a==='R'){const r=rot(cur.m);for(const k of [0,-1,1,-2,2])if(!hit(r,cur.x+k,cur.y)){cur.m=r;cur.x+=k;break}}
+if(a==='H'){let d=0;while(!hit(cur.m,cur.x,cur.y+1)){cur.y++;d++}sc+=d*2;upd();merge()}
+draw()}
+function cell(ctx,x,y,col,s,a){ctx.globalAlpha=a||1;ctx.fillStyle=col;ctx.fillRect(x*s+1,y*s+1,s-2,s-2);ctx.globalAlpha=1}
+function draw(){c.clearRect(0,0,cv.width,cv.height);
+B.forEach((r,y)=>r.forEach((v,x)=>{if(v)cell(c,x,y,COL[v],S)}));
+if(cur&&on){let gy=cur.y;while(!hit(cur.m,cur.x,gy+1))gy++;
+cur.m.forEach((r,ry)=>r.forEach((v,qx)=>{if(v){cell(c,cur.x+qx,gy+ry,COL[cur.k],S,.22);cell(c,cur.x+qx,cur.y+ry,COL[cur.k],S)}}))}}
+function drawNext(){nc.clearRect(0,0,64,48);const m=nxt.m,s=12,ox=(64-m[0].length*s)/2/s,oy=(48-m.length*s)/2/s;
+m.forEach((r,y)=>r.forEach((v,x)=>{if(v){nc.fillStyle=COL[nxt.k];nc.fillRect((x+ox)*s+1,(y+oy)*s+1,s-2,s-2)}}))}
+/* 속도는 레벨 따라 자동으로: 보통(1~3) → 빠름(4~7) → 지옥(8~) */
+function stage(l){return l>=8?2:l>=4?1:0}
+const STAGE=['🐢 보통','🐇 빠름','🔥 지옥'];
+function speed(){return Math.max(45,Math.round(650*Math.pow(.8,lv-1)))}
+function drawSpd(){document.getElementById('spd').textContent=STAGE[stage(lv||1)]}
+function restart(){clearInterval(tm);tm=setInterval(drop,speed())}
+function over(){on=false;clearInterval(tm);const nb=sc>best;if(nb){best=sc;document.getElementById('bs').textContent=best;try{localStorage.setItem('mini_tetris_best',best);}catch(e){}}
+document.getElementById('msg').textContent=(nb?'신기록! ':'')+'게임 오버 · '+ln+'줄';
+document.getElementById('st').textContent='↻ 다시 하기'}
+function start(){B=Array.from({length:H},()=>Array(W).fill(0));sc=0;ln=0;lv=1;nxt=null;bag=[];on=true;pause=false;upd();
+document.getElementById('ps').textContent='⏸ 일시정지';
+document.getElementById('st').textContent='↻ 새 판';drawSpd();document.getElementById('msg').textContent='화이팅!';spawn();draw();restart();document.getElementById('wrap').focus()}
+document.getElementById('st').onclick=start;
+document.getElementById('ps').onclick=()=>{if(!on)return;pause=!pause;document.getElementById('msg').textContent=pause?'잠깐 쉬는 중':'화이팅!';document.getElementById('ps').textContent=pause?'▷ 이어 하기':'⏸ 일시정지';pause?clearInterval(tm):restart();document.getElementById('wrap').focus()};
+document.querySelectorAll('.tb').forEach(b=>b.onclick=()=>{act(b.dataset.a);document.getElementById('wrap').focus()});
+document.addEventListener('keydown',e=>{const m={ArrowLeft:'L',ArrowRight:'Rt',ArrowUp:'R',ArrowDown:'D',' ':'H'};if(m[e.key]&&on){e.preventDefault();act(m[e.key])}else if((e.key==='p'||e.key==='P')&&on)document.getElementById('ps').click()});
+B=Array.from({length:H},()=>Array(W).fill(0));draw();drawSpd();
+
+/* ---------- 미니 창으로 열기 ---------- */
+(function(){
+  const isMini=location.hash==="#mini";
+  const W0=330,H0=460;
+  function openMini(){
+    const L=Math.max(0,(screen.availWidth||1200)-W0-20),T=Math.max(0,(screen.availHeight||800)-H0-60);
+    return window.open(location.href.split("#")[0]+"#mini","mini_tetris",`popup=yes,width=${W0},height=${H0},left=${L},top=${T},resizable=yes`);
+  }
+  if(isMini){
+    document.body.classList.add("mini");document.title="🧱";
+    try{window.resizeTo(W0,H0);}catch(e){}
+    setTimeout(()=>{try{const dw=window.outerWidth-window.innerWidth,dh=window.outerHeight-window.innerHeight;window.resizeTo(document.body.scrollWidth+dw,document.documentElement.scrollHeight+dh+4);}catch(e){}},150);
+    return;
+  }
+  const ov=document.getElementById("launch");ov.style.display="flex";
+  function go(){const w=openMini();
+    if(w){document.getElementById("lmsg").textContent="미니 창이 열렸어요! 이 창은 닫아도 돼요 👋";document.getElementById("openMini").style.display="none";try{w.focus();}catch(e){}}
+    else document.getElementById("lmsg").textContent="창 열기가 막혔어요 😢 주소창 오른쪽의 팝업 허용을 눌러 주세요";}
+  document.getElementById("openMini").onclick=go;
+  document.getElementById("here").onclick=()=>{ov.style.display="none";};
+  const w=openMini();
+  if(w){document.getElementById("lmsg").textContent="미니 창이 열렸어요! 이 창은 닫아도 돼요 👋";document.getElementById("openMini").style.display="none";}
+})();
+</script>
+</body>
+</html>
